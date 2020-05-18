@@ -312,6 +312,7 @@ elf_read_firmware(
 		*data_ee = NULL;                /* Data Descriptor */
 	Elf_Data *data_fuse = NULL;
 	Elf_Data *data_lockbits = NULL;
+	uint32_t mcu_section_size = 0;    /* Size of .mmcu section */
 
 	memset(firmware, 0, sizeof(*firmware));
 #if ELF_SYMBOLS
@@ -353,6 +354,7 @@ elf_read_firmware(
 			elf_parse_mmcu_section(firmware, s->d_buf, s->d_size);
 			//printf("%s: avr_mcu_t size %ld / read %ld\n", __FUNCTION__, sizeof(struct avr_mcu_t), s->d_size);
 		//	avr->frequency = f_cpu;
+			mcu_section_size = s->d_size;
 		}
 #if ELF_SYMBOLS
 		// When we find a section header marked SHT_SYMTAB stop and get symbols
@@ -408,7 +410,8 @@ elf_read_firmware(
 	uint32_t offset = 0;
 	firmware->flashsize =
 			(data_text ? data_text->d_size : 0) +
-			(data_data ? data_data->d_size : 0);
+			(data_data ? data_data->d_size : 0) +
+			mcu_section_size;
 	firmware->flash = malloc(firmware->flashsize);
 
 	// using unsigned int for output, since there is no AVR with 4GB
@@ -419,6 +422,7 @@ elf_read_firmware(
 				(unsigned int)data_text->d_size, firmware->flashbase);
 		offset += data_text->d_size;
 	}
+	offset += mcu_section_size;
 	if (data_data) {
 	//	hdump("data", data_data->d_buf, data_data->d_size);
 		memcpy(firmware->flash + offset, data_data->d_buf, data_data->d_size);
